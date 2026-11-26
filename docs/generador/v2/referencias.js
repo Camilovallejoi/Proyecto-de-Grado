@@ -1,0 +1,71 @@
+const { Paragraph, TextRun } = require('docx');
+const { H1 } = require('../doc_helpers');
+
+const refs = [
+  'Aiken, L. R. (1985). Three coefficients for analyzing the reliability and validity of ratings. Educational and Psychological Measurement, 45(1), 131-142. https://doi.org/10.1177/0013164485451012',
+  'Alcaldía Distrital de Barranquilla. (2025). Registro de propiedad horizontal Barranquilla [Conjunto de datos]. Datos Abiertos Colombia. Recuperado el 26 de noviembre de 2026. https://www.datos.gov.co/d/j6w9-gezc',
+  'Angulo Lara, M. (2024, 9 de junio). Los conflictos que dinamitan la convivencia en la propiedad horizontal en el Atlántico. El Heraldo. https://www.elheraldo.co/barranquilla/los-conflictos-que-dinamitan-la-convivencia-en-la-propiedad-horizontal-en-el-atlantico',
+  'App Web Propiedad Horizontal. (s.f.). Plataforma App Web Propiedad Horizontal. Recuperado en 2026. https://appwebpropiedadhorizontal.com/',
+  'Bourdon, J. J., y Bautista Mejía, M. T. (2019). Percepción de situaciones de convivencia en propiedad horizontal en Bogotá [Trabajo de grado, Universidad Nacional Abierta y a Distancia]. Repositorio Institucional UNAD. https://repository.unad.edu.co/handle/10596/28108',
+  'Brooke, J. (1996). SUS: A "quick and dirty" usability scale. En P. W. Jordan, B. Thomas, B. A. Weerdmeester y I. L. McClelland (Eds.), Usability evaluation in industry (pp. 189-194). Taylor & Francis.',
+  'Buildium. (s.f.). Buildium: property management software. Recuperado en 2026. https://www.buildium.com/',
+  'Colombia PropTech. (s.f.). Proptech en Colombia: ecosistema que redefine la forma en que construimos y habitamos ciudades. Recuperado en 2026. https://colombiaproptech.com/proptech-en-colombia-ecosistema-que-redefine-la-forma-en-que-construimos-y-habitamos-ciudades/',
+  'Condo Control. (s.f.). Amenity booking overview. Recuperado en 2026. https://support.condocontrol.com/hc/en-us/articles/36801083805595-Amenity-Booking-Overview',
+  'Congreso de Colombia. (1999). Ley 527 de 1999. Por medio de la cual se define y reglamenta el acceso y uso de los mensajes de datos, del comercio electrónico y de las firmas digitales.',
+  'Congreso de Colombia. (2001). Ley 675 de 2001. Por medio de la cual se expide el régimen de propiedad horizontal.',
+  'Congreso de Colombia. (2009). Ley 1273 de 2009. Por medio de la cual se crea el bien jurídico de la protección de la información y de los datos.',
+  'Congreso de Colombia. (2012). Ley Estatutaria 1581 de 2012. Por la cual se dictan disposiciones generales para la protección de datos personales. https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=49981',
+  'ConjuntosApp. (s.f.). ConjuntosApp: software para conjuntos residenciales. Recuperado el 24 y 26 de noviembre de 2026. https://conjuntosapp.co/',
+  'Constitución Política de Colombia [Const.]. (1991). República de Colombia.',
+  'De La Hoz, A. (2019a, 10 de marzo). Los siete líos más frecuentes en la propiedad horizontal. El Heraldo. https://www.elheraldo.co/barranquilla/los-siete-lios-mas-frecuentes-en-la-propiedad-horizontal-605980',
+  'De La Hoz, A. (2019b, 21 de julio). Los líos de la propiedad horizontal en redes sociales. El Heraldo. https://www.elheraldo.co/barranquilla/2019/07/21/los-lios-de-la-propiedad-horizontal-en-redes-sociales-651459/',
+  'Edifia. (s.f.). Edifia: plataforma para copropiedades. Recuperado el 24 de noviembre de 2026. https://edifia.com.co/residentes',
+  'El Tiempo. (2018, 30 de junio). Los siete dolores de cabeza en la propiedad horizontal. https://www.eltiempo.com/bogota/los-problemas-mas-frecuentes-con-la-propiedad-horizontal-237898',
+  'El Tiempo. (2025, 30 de diciembre). Lonja de Propiedad Horizontal del Atlántico advierte que cuotas de administración subirían hasta 20 % en 2026 por alza del salario mínimo. https://www.eltiempo.com/colombia/barranquilla/lonja-de-propiedad-horizontal-del-atlantico-advierte-que-cuotas-de-administracion-subirian-hasta-20-en-2026-por-alza-del-salario-minimo-3520686',
+  'Emisora Atlántico. (2025, 30 de diciembre). Cuotas de administración en conjuntos residenciales podrían subir entre 12% y 20% en 2026: Propiedad Horizontal. https://emisoraatlantico.com.co/economia/cuotas-de-administracion-en-conjuntos-residenciales-podrian-subir-entre-12-y-20-en-2026-propiedad-horizontal/',
+  'FácilAdmin. (s.f.). FácilAdmin propiedades horizontales. Recuperado en 2026. https://www.faciladmin.co/',
+  'Fielding, R. T. (2000). Architectural styles and the design of network-based software architectures [Tesis doctoral, University of California, Irvine].',
+  'Fleischer, F., y Hurtado-Tarazona, A. (2022). Vivienda de interés social y pandemia en Colombia. Disrupciones en las formas de habitar. Bitácora Urbano Territorial, 32(2), 241-253. https://doi.org/10.15446/bitacora.v32n2.99479',
+  'Google. (s.f.). Firebase Cloud Messaging. Firebase documentation. https://firebase.google.com/docs/cloud-messaging',
+  'Guest, G., Bunce, A., y Johnson, L. (2006). How many interviews are enough? An experiment with data saturation and variability. Field Methods, 18(1), 59-82. https://doi.org/10.1177/1525822X05279903',
+  'Hernández-Sampieri, R., Fernández-Collado, C., y Baptista-Lucio, P. (2014). Metodología de la investigación (6.ª ed.). McGraw-Hill Education.',
+  'Jiménez, S. (2022, 30 de enero). Los números rojos de la Propiedad Horizontal en B/quilla tras la pandemia. El Heraldo. https://www.elheraldo.co/barranquilla/2022/01/30/los-numeros-rojos-de-la-propiedad-horizontal-en-b-quilla-tras-la-pandemia-883711/',
+  'Jones, M., Bradley, J., y Sakimura, N. (2015). JSON Web Token (JWT) (RFC 7519). Internet Engineering Task Force. https://www.rfc-editor.org/rfc/rfc7519',
+  'Martínez Sanabria, W. C. (2018). Revisión de las problemáticas en la administración de la propiedad horizontal que se presentan en los conjuntos residenciales en Colombia [Monografía, Universidad Nacional Abierta y a Distancia]. Repositorio Institucional UNAD. https://repository.unad.edu.co/handle/10596/20332',
+  'Mi Conjunto. (s.f.). Mi Conjunto, de 109 Apps. Recuperado el 24 de noviembre de 2026. https://www.109apps.com/mi-conjunto/',
+  'Ministerio de Comercio, Industria y Turismo. (2015). Decreto 1074 de 2015. Decreto Único Reglamentario del Sector Comercio, Industria y Turismo.',
+  'miUrba. (s.f.). miUrba [Aplicación móvil]. App Store. Recuperado en 2026. https://apps.apple.com/mx/app/miurba/id1603702116',
+  'Nielsen, J., y Landauer, T. K. (1993). A mathematical model of the finding of usability problems. En Proceedings of the INTERACT \'93 and CHI \'93 Conference on Human Factors in Computing Systems (pp. 206-213). ACM. https://doi.org/10.1145/169059.169166',
+  'Norman, D. (1988). The design of everyday things. Basic Books.',
+  'OWASP Foundation. (s.f.-a). Forgot password cheat sheet. OWASP Cheat Sheet Series. https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html',
+  'OWASP Foundation. (s.f.-b). Password storage cheat sheet. OWASP Cheat Sheet Series. https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html',
+  'Portafolio. (2026, 28 de junio). Casi la mitad de viviendas urbanas en Colombia están concentradas en conjuntos cerrados o edificios. https://www.portafolio.co/mis-finanzas/vivienda/casi-la-mitad-de-viviendas-urbanas-en-colombia-estan-concentradas-en-conjuntos-cerrados-o-edificios-497094',
+  'Portea. (s.f.). Proptech en Colombia 2026. Recuperado en 2026. https://www.portea.com.co/blog/proptech-colombia-2026/',
+  'PostgreSQL Global Development Group. (s.f.). Constraints. En PostgreSQL documentation. https://www.postgresql.org/docs/current/ddl-constraints.html',
+  'Presidencia de la República de Colombia. (1994). Decreto Ley 356 de 1994. Por el cual se expide el Estatuto de Vigilancia y Seguridad Privada.',
+  'Propiedata. (s.f.). Software para administración de propiedad horizontal. Recuperado en 2026. https://www.propiedata.com/software-conjuntos-residenciales/',
+  'Provos, N., y Mazières, D. (1999). A future-adaptable password scheme. En Proceedings of the 1999 USENIX Annual Technical Conference. USENIX Association. https://www.usenix.org/conference/1999-usenix-annual-technical-conference/future-adaptable-password-scheme',
+  'Ramírez Salamanca, G. N., Donoso Gutiérrez, S. C., y Vargas, N. C. (2020). Relación normativa de los conflictos entre residentes, propietarios y administradores de la propiedad horizontal en Bogotá, Colombia. Servicio Nacional de Aprendizaje (SENA), Centro de Tecnologías para la Construcción y la Madera. https://revistas.sena.edu.co/index.php/idea/article/download/3953/4240',
+  'Remolina Ramírez, I. (2021). Principales conflictos de convivencia percibidos en un conjunto residencial en el norte de la ciudad de Bogotá D.C., para proponer estrategias de mejora [Tesis de maestría, Universidad Nacional Abierta y a Distancia]. Repositorio Institucional UNAD. https://repository.unad.edu.co/bitstream/handle/10596/41598/iremolinar.pdf',
+  'ResidenciAPP. (s.f.). ResidenciAPP [Aplicación móvil]. App Store. Recuperado en 2026. https://apps.apple.com/mx/app/residenciapp/id6744846844',
+  'Residentia. (s.f.). Residentia: administración de residenciales. Recuperado el 24 de noviembre de 2026. https://residentia.net/',
+  'Saltzer, J. H., y Schroeder, M. D. (1975). The protection of information in computer systems. Proceedings of the IEEE, 63(9), 1278-1308. https://doi.org/10.1109/PROC.1975.9939',
+  'Sandhu, R. S., Coyne, E. J., Feinstein, H. L., y Youman, C. E. (1996). Role-based access control models. Computer, 29(2), 38-47. https://doi.org/10.1109/2.485845',
+  'Schwaber, K., y Sutherland, J. (2020). La guía de Scrum. https://scrumguides.org/',
+  'TownSq. (s.f.). TownSq Community: HOA management app & software. Recuperado en 2026. https://www.townsq.io/solutions/townsq-community',
+  'Universidad Cooperativa de Colombia. (s.f.). Estudio de factibilidad para creación de la empresa de propiedad horizontal "Sabemos administrar PH" con aplicación móvil en la localidad Barrios Unidos de la ciudad de Bogotá [Trabajo de grado]. Repositorio Institucional UCC. https://repository.ucc.edu.co/entities/publication/48870d84-c077-46b8-9cff-de0e69152abf',
+  'Vecindapp. (s.f.). Software ERP para propiedad horizontal Colombia. Recuperado en 2026. https://vecindapp.com.co/software-para-propiedad-horizontal/',
+  'Vecinos Conectados. (s.f.). Software para conjuntos residenciales. Recuperado en 2026. https://vecinosconectados.com/',
+  'ZonAHZ. (s.f.). ZonAHZ [Aplicación móvil]. App Store. Recuperado en 2026. https://apps.apple.com/mx/app/zonahz/id6463964721',
+];
+
+// APA: sangría francesa y orden alfabético.
+const parrafo = (texto) => new Paragraph({
+  indent: { left: 567, hanging: 567 },
+  spacing: { after: 110, line: 252 },
+  children: [new TextRun({ text: texto, size: 21, font: 'Calibri' })],
+});
+
+const referencias = [H1('Referencias'), ...[...refs].sort((a, b) => a.localeCompare(b, 'es')).map(parrafo)];
+
+module.exports = { referencias };

@@ -3,6 +3,8 @@
         android:label="Cantaluna"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Canal de Android para las notificaciones de Firebase (se crea en MainActivity) -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="cantaluna_avisos" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -37,6 +39,11 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- Para abrir el marcador del teléfono al llamar a portería o a un residente -->
+        <intent>
+            <action android:name="android.intent.action.DIAL"/>
+            <data android:scheme="tel"/>
+        </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

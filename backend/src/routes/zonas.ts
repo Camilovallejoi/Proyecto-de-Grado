@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { pool, auditar } from '../db.js';
 import { HttpError } from '../errors.js';
 import { autenticar, exigirRol } from '../auth.js';
+import { notificarUsuarios } from '../push.js';
 import { limitesDelDia, minutosDeHora } from '../tiempo.js';
 
 export const zonasRouter = Router();
@@ -45,7 +46,7 @@ zonasRouter.get('/', async (req, res) => {
   res.json(rows);
 });
 
-zonasRouter.post('/', exigirRol('administrador'), async (req, res) => {
+zonasRouter.post('/', exigirRol('administrador', 'vigilante'), async (req, res) => {
   const d = crearSchema.parse(req.body);
   if (minutosDeHora(d.hora_cierre) <= minutosDeHora(d.hora_apertura)) throw new HttpError(400, 'La hora de cierre debe ser posterior a la de apertura');
   const client = await pool.connect();
@@ -75,7 +76,7 @@ zonasRouter.post('/', exigirRol('administrador'), async (req, res) => {
   }
 });
 
-zonasRouter.put('/:id', exigirRol('administrador'), async (req, res) => {
+zonasRouter.put('/:id', exigirRol('administrador', 'vigilante'), async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, 'Identificador inválido');
   const d = editarSchema.parse(req.body);
@@ -83,7 +84,7 @@ zonasRouter.put('/:id', exigirRol('administrador'), async (req, res) => {
   try {
     await client.query('BEGIN');
     const actual = await client.query(
-      `SELECT to_char(hora_apertura,'HH24:MI') AS a, to_char(hora_cierre,'HH24:MI') AS c FROM zona_comun WHERE id=$1 AND copropiedad_id=$2 AND eliminada_en IS NULL FOR UPDATE`,
+      `SELECT to_char(hora_apertura,'HH24:MI') AS a, to_char(hora_cierre,'HH24:MI') AS c, estado, nombre FROM zona_comun WHERE id=$1 AND copropiedad_id=$2 AND eliminada_en IS NULL FOR UPDATE`,
       [id, req.user!.copropiedadId],
     );
     if (!actual.rowCount) throw new HttpError(404, 'Zona no encontrada');
@@ -115,6 +116,18 @@ zonasRouter.put('/:id', exigirRol('administrador'), async (req, res) => {
     }
     await auditar(client, { copropiedadId: req.user!.copropiedadId, usuarioId: req.user!.id, accion: 'editar_zona', entidad: 'zona_comun', entidadId: id, detalle: d });
     await client.query('COMMIT');
+    // Si la zona sale de servicio, quienes tienen reserva próxima se enteran; el personal decide si la cancela.
+    if (actual.rows[0].estado === 'activa' && d.estado && d.estado !== 'activa') {
+      const afectados = await pool.query(
+        `SELECT DISTINCT usuario_id FROM reserva WHERE zona_id = $1 AND estado = 'confirmada' AND fin > now()`,
+        [id],
+      );
+      await notificarUsuarios(afectados.rows.map((a) => a.usuario_id), {
+        titulo: d.estado === 'mantenimiento' ? 'Zona en mantenimiento' : 'Zona fuera de servicio',
+        cuerpo: `${actual.rows[0].nombre} no está disponible por ahora y tienes una reserva próxima. Confirma con portería antes de usarla.`,
+        datos: { tipo: 'zona', zona_id: String(id) },
+      });
+    }
     const { rows } = await pool.query(`${SELECT_ZONA} WHERE z.id = $1`, [id]);
     res.json(rows[0]);
   } catch (e: any) {
@@ -143,7 +156,7 @@ zonasRouter.get('/:id/disponibilidad', async (req, res) => {
 });
 
 // Elimina una zona (eliminación lógica: se conserva el historial). No se puede si tiene reservas futuras confirmadas.
-zonasRouter.delete('/:id', exigirRol('administrador'), async (req, res) => {
+zonasRouter.delete('/:id', exigirRol('administrador', 'vigilante'), async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, 'Identificador inválido');
   const client = await pool.connect();
@@ -159,7 +172,7 @@ zonasRouter.delete('/:id', exigirRol('administrador'), async (req, res) => {
       [id],
     );
     if (futuras.rows[0].n > 0) {
-      throw new HttpError(409, `La zona tiene ${futuras.rows[0].n} reserva(s) futura(s). Cancélalas primero o ponla en mantenimiento.`);
+      throw new HttpError(409, `La zona tiene ${futuras.rows[0].n} reserva(s) futura(s). Portería puede cancelarlas; mientras tanto puedes ponerla en mantenimiento.`);
     }
     await client.query('UPDATE zona_comun SET eliminada_en = now() WHERE id = $1', [id]);
     await auditar(client, { copropiedadId: req.user!.copropiedadId, usuarioId: req.user!.id, accion: 'eliminar_zona', entidad: 'zona_comun', entidadId: id, detalle: { nombre: z.rows[0].nombre } });

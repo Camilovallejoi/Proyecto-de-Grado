@@ -73,7 +73,9 @@ class _ZonasPageState extends State<ZonasPage> {
 
   @override
   Widget build(BuildContext context) {
-    final esAdmin = Api.i.usuario!.esAdmin;
+    final u = Api.i.usuario!;
+    final esAdmin = u.esPersonal; // administración y vigilante crean, configuran y eliminan zonas
+    final esPersonal = u.esPersonal;
     return Scaffold(
       floatingActionButton: esAdmin
           ? FloatingActionButton.extended(
@@ -85,7 +87,8 @@ class _ZonasPageState extends State<ZonasPage> {
       body: FutureBuilder<List<Zona>>(
         future: _zonas,
         builder: (context, snap) {
-          if (snap.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
+          // Al recargar se conserva la lista anterior en pantalla: el círculo solo aparece la primera vez.
+          if (snap.connectionState != ConnectionState.done && !snap.hasData) return const Center(child: CircularProgressIndicator());
           if (snap.hasError) {
             return Center(
               child: Padding(
@@ -139,8 +142,13 @@ class _ZonasPageState extends State<ZonasPage> {
                             ],
                           )
                         : (reservable ? const Icon(Icons.chevron_right) : null),
-                    enabled: esAdmin || reservable,
-                    onTap: reservable ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => ReservarPage(zona: z))) : null,
+                    enabled: esPersonal || reservable,
+                    // Solo el residente reserva; administración y vigilante abren la zona para editarla.
+                    onTap: esPersonal
+                        ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => ZonaFormPage(zona: z)))
+                        : reservable
+                            ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => ReservarPage(zona: z)))
+                            : null,
                   ),
                 );
               },

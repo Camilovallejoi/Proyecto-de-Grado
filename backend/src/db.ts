@@ -1,6 +1,9 @@
 import pg from 'pg';
 import { config } from './config.js';
 
+// PostgreSQL entrega los BIGINT/BIGSERIAL como texto; los identificadores de este sistema caben de sobra en un número de JavaScript.
+pg.types.setTypeParser(pg.types.builtins.INT8, (valor: string) => Number(valor));
+
 export const pool = new pg.Pool({ connectionString: config.DATABASE_URL });
 
 export async function auditar(

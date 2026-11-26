@@ -95,6 +95,7 @@ class _ZonaFormPageState extends State<ZonaFormPage> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _estado,
+              isExpanded: true, // las opciones largas se ajustan al ancho del teléfono
               decoration: const InputDecoration(labelText: 'Estado', border: OutlineInputBorder()),
               items: const [
                 DropdownMenuItem(value: 'activa', child: Text('Activa')),

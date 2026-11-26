@@ -5,13 +5,29 @@ import pg from 'pg';
 // Datos de prueba ficticios (no contienen información personal real).
 const PASSWORD_DEMO = 'Demo12345!';
 
+/** Números de ejemplo (no son reales). Cámbialos en la app: Mi perfil (administración y residente). */
+async function telefonosDemo(c: pg.Client) {
+  await c.query(`UPDATE copropiedad SET telefono_porteria = '6050000000' WHERE nit = '900000001-1' AND telefono_porteria IS NULL`);
+  await c.query(`UPDATE usuario SET telefono = '3000000000', telefono_autorizado_en = now() WHERE correo = 'residente@demo.test' AND telefono IS NULL`);
+}
+
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error('Falta DATABASE_URL en backend/.env');
   const c = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await c.connect();
   try {
     if ((await c.query("SELECT 1 FROM copropiedad WHERE nit = '900000001-1'")).rowCount) {
-      console.log('Los datos de prueba ya existen.');
+      // Conjunto ya sembrado: solo se asegura el usuario celador (rol añadido después).
+      const hashV = await bcrypt.hash(PASSWORD_DEMO, 10);
+      const r = await c.query(
+        `INSERT INTO usuario (copropiedad_id, rol_id, nombre, correo, password_hash)
+         SELECT cp.id, (SELECT id FROM rol WHERE nombre = 'vigilante'), 'Celador Demo', 'celador@demo.test', $1
+           FROM copropiedad cp WHERE cp.nit = '900000001-1'
+         ON CONFLICT (lower(correo)) DO NOTHING`,
+        [hashV],
+      );
+      console.log(r.rowCount ? 'Se creó el celador de prueba: celador@demo.test.' : 'Los datos de prueba ya existen.');
+      await telefonosDemo(c);
       return;
     }
     await c.query('BEGIN');
@@ -32,6 +48,10 @@ async function main() {
       `INSERT INTO usuario (copropiedad_id, unidad_id, rol_id, nombre, correo, password_hash) VALUES ($1,$2,$3,'Residente Demo','residente@demo.test',$4)`,
       [cop, unidades['Torre 1 - Apto 101'], await rol('residente'), hash],
     );
+    await c.query(
+      `INSERT INTO usuario (copropiedad_id, rol_id, nombre, correo, password_hash) VALUES ($1,$2,'Celador Demo','celador@demo.test',$3)`,
+      [cop, await rol('vigilante'), hash],
+    );
     const zonas: [string, string, number, string, string, number, number][] = [
       ['Piscina', 'Piscina para adultos y niños', 30, '08:00', '20:00', 120, 2],
       ['Salón Social', 'Salón para eventos y reuniones', 60, '09:00', '22:00', 240, 1],
@@ -50,10 +70,12 @@ async function main() {
        VALUES ($1,$2,'DEMO2026',$3, now() + interval '30 days')`,
       [cop, unidades['Torre 1 - Apto 102'], admin],
     );
+    await telefonosDemo(c);
     await c.query('COMMIT');
     console.log('Datos de prueba creados.');
     console.log('  Administrador: admin@demo.test / ' + PASSWORD_DEMO);
     console.log('  Residente:     residente@demo.test / ' + PASSWORD_DEMO);
+    console.log('  Celador:       celador@demo.test / ' + PASSWORD_DEMO);
     console.log('  Código de invitación para registrarse: DEMO2026');
   } catch (e) {
     await c.query('ROLLBACK');

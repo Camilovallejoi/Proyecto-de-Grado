@@ -111,7 +111,9 @@ ThemeData _construir(ColorScheme cs) {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(50),
+        // Sin ancho mínimo infinito: así el botón también cabe junto a un texto o dentro de una lista.
+        // En columnas y listas sigue ocupando todo el ancho cuando la pantalla lo estira.
+        minimumSize: const Size(88, 50),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
       ),

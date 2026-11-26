@@ -33,8 +33,8 @@ function box(x, y, w, h, opts = {}) {
 
 // A UML class box: title bar + attribute list + optional method list, separated by lines.
 function classBox(x, y, w, title, attrs = [], methods = [], opts = {}) {
-  const titleH = 28;
-  const rowH = 16;
+  const titleH = 32;
+  const rowH = 21;
   const attrsH = Math.max(attrs.length, 1) * rowH + 8;
   const methodsH = methods.length ? methods.length * rowH + 8 : 10;
   const totalH = titleH + attrsH + methodsH;
@@ -42,17 +42,17 @@ function classBox(x, y, w, title, attrs = [], methods = [], opts = {}) {
   s += box(x, y, w, titleH, { fill: opts.fill || FILL_ACCENT, rx: 0 });
   s += `<rect x="${x}" y="${y}" width="${w}" height="${totalH}" rx="4" fill="none" stroke="${LINE}" stroke-width="1.5"/>`;
   s += `<line x1="${x}" y1="${y + titleH}" x2="${x + w}" y2="${y + titleH}" stroke="${LINE}" stroke-width="1.2"/>`;
-  s += text(x + w / 2, y + titleH - 9, title, { anchor: 'middle', weight: 'bold', size: 13 });
-  let ay = y + titleH + 14;
+  s += text(x + w / 2, y + titleH - 10, title, { anchor: 'middle', weight: 'bold', size: 17 });
+  let ay = y + titleH + 19;
   attrs.forEach((a) => {
-    s += text(x + 8, ay, a, { size: 11 });
+    s += text(x + 8, ay, a, { size: 15 });
     ay += rowH;
   });
   if (methods.length) {
     s += `<line x1="${x}" y1="${y + titleH + attrsH}" x2="${x + w}" y2="${y + titleH + attrsH}" stroke="${LINE}" stroke-width="1.2"/>`;
-    let my = y + titleH + attrsH + 14;
+    let my = y + titleH + attrsH + 19;
     methods.forEach((m) => {
-      s += text(x + 8, my, m, { size: 11 });
+      s += text(x + 8, my, m, { size: 15 });
       my += rowH;
     });
   }
@@ -83,7 +83,7 @@ function ellipseUC(cx, cy, rx, ry, label, opts = {}) {
   const lh = 13;
   const startY = cy - ((lines.length - 1) * lh) / 2 + 4;
   lines.forEach((l, i) => {
-    s += text(cx, startY + i * lh, l, { anchor: 'middle', size: 11.5 });
+    s += text(cx, startY + i * lh, l, { anchor: 'middle', size: 16 });
   });
   return s;
 }
@@ -98,20 +98,20 @@ function actor(cx, y, label) {
   s += line(cx - 14, bodyTop + 10, cx + 14, bodyTop + 10, {});
   s += line(cx, bodyBot, cx - 12, bodyBot + 20, {});
   s += line(cx, bodyBot, cx + 12, bodyBot + 20, {});
-  s += text(cx, bodyBot + 36, label, { anchor: 'middle', weight: 'bold', size: 12 });
+  s += text(cx, bodyBot + 38, label, { anchor: 'middle', weight: 'bold', size: 16 });
   return s;
 }
 
 function pkgBox(x, y, w, h, title, items = [], fill = '#ffffff') {
-  const tabW = Math.min(90, w * 0.42);
-  const tabH = 16;
+  const tabW = Math.min(w, Math.max(90, title.length * 8.2 + 16));
+  const tabH = 22;
   let s = `<rect x="${x}" y="${y}" width="${tabW}" height="${tabH}" fill="${FILL_ACCENT}" stroke="${LINE}" stroke-width="1.3"/>`;
   s += box(x, y + tabH, w, h - tabH, { fill });
-  s += text(x + 6, y + tabH - 4, title, { size: 11.5, weight: 'bold' });
-  let iy = y + tabH + 18;
+  s += text(x + 6, y + tabH - 5, title, { size: 15, weight: 'bold' });
+  let iy = y + tabH + 24;
   items.forEach((it) => {
-    s += text(x + w / 2, iy, it, { size: 10.5, anchor: 'middle' });
-    iy += 15;
+    s += text(x + w / 2, iy, it, { size: 14, anchor: 'middle' });
+    iy += 20;
   });
   return s;
 }

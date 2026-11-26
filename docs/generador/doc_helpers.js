@@ -1,6 +1,6 @@
 const {
   Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell,
-  WidthType, ShadingType, BorderStyle, ImageRun, PageBreak, VerticalAlign, HeightRule,
+  WidthType, ShadingType, BorderStyle, ImageRun, PageBreak, VerticalAlign, HeightRule, TableLayoutType,
 } = require('docx');
 
 const FONT = 'Calibri';
@@ -106,10 +106,10 @@ function SimpleTable(header, rows, colWidths, opts = {}) {
         ? { type: ShadingType.CLEAR, color: 'auto', fill: '1F4E79' }
         : (opts.zebra && opts._rowIdx % 2 === 1 ? { type: ShadingType.CLEAR, color: 'auto', fill: 'F2F6FA' } : undefined),
       verticalAlign: VerticalAlign.CENTER,
-      margins: { top: 80, bottom: 80, left: 100, right: 100 },
+      margins: { top: opts.size ? 40 : 70, bottom: opts.size ? 40 : 70, left: 90, right: 90 },
       children: [new Paragraph({
         alignment: isHeader ? AlignmentType.CENTER : AlignmentType.LEFT,
-        children: [new TextRun({ text: String(text), bold: !!isHeader, color: isHeader ? 'FFFFFF' : '000000', size: 20, font: FONT })],
+        children: [new TextRun({ text: String(text), bold: !!isHeader, color: isHeader ? 'FFFFFF' : '000000', size: opts.size || 20, font: FONT })],
       })],
     });
   }
@@ -121,6 +121,7 @@ function SimpleTable(header, rows, colWidths, opts = {}) {
   return new Table({
     width: { size: totalWidth, type: WidthType.DXA },
     columnWidths: colWidths,
+    layout: TableLayoutType.FIXED,
     borders: allBorders('B9C6D6', 4),
     rows: [headerRow, ...bodyRows],
   });

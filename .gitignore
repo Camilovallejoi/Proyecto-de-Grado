@@ -4,3 +4,13 @@ node_modules/
 !.env.example
 *.log
 .DS_Store
+
+# Firebase: la clave privada de la cuenta de servicio nunca se sube al repositorio
+backend/firebase-service-account.json
+*firebase-adminsdk*.json
+
+# El documento de Word se entrega aparte: no se sube al repositorio
+docs/documento/
+
+# Configuracion de Firebase de la app (cada quien usa la de su proyecto)
+mobile/android/app/google-services.json

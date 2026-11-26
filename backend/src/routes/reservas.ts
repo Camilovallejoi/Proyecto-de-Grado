@@ -4,6 +4,18 @@ import { pool, auditar } from '../db.js';
 import { HttpError } from '../errors.js';
 import { autenticar } from '../auth.js';
 import { aLocal, limitesDelDia, minutosDeHora } from '../tiempo.js';
+import { notificarUsuarios } from '../push.js';
+
+/** Cuando portería cancela o elimina la reserva de un residente, se le avisa (si la hizo otra persona). */
+async function avisarReservaRetirada(reservaId: number, usuarioId: number, inicio: Date | string, autorId: number, accion: 'cancelada' | 'eliminada') {
+  if (usuarioId === autorId) return;
+  const cuando = new Date(inicio).toLocaleString('es-CO', { timeZone: 'America/Bogota', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  await notificarUsuarios([usuarioId], {
+    titulo: 'Tu reserva fue retirada',
+    cuerpo: `La reserva del ${cuando} fue ${accion} por portería. Puedes hacer otra desde la app.`,
+    datos: { tipo: 'reserva', reserva_id: String(reservaId) },
+  });
+}
 
 export const reservasRouter = Router();
 reservasRouter.use(autenticar);
@@ -14,7 +26,7 @@ const crearSchema = z.object({
   fin: z.string().datetime({ offset: true }),
 });
 
-const SELECT_RESERVA = `
+export const SELECT_RESERVA = `
   SELECT r.id, r.zona_id, z.nombre AS zona, r.inicio, r.fin, r.estado, r.creado_en,
          u.nombre AS usuario, ur.identificador AS unidad
     FROM reserva r
@@ -93,9 +105,9 @@ reservasRouter.get('/mias', async (req, res) => {
   res.json(rows);
 });
 
-// El administrador ve todas las reservas de su copropiedad (filtros opcionales).
+// El vigilante ve todas las reservas de su copropiedad (filtros opcionales).
 reservasRouter.get('/', async (req, res) => {
-  if (req.user!.rol !== 'administrador') throw new HttpError(403, 'No tienes permiso para esta acción');
+  if (req.user!.rol !== 'vigilante') throw new HttpError(403, 'La operación de las reservas es del vigilante');
   const q = z.object({ zona_id: z.coerce.number().int().optional(), fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }).parse(req.query);
   const params: unknown[] = [req.user!.copropiedadId];
   let where = 'WHERE r.copropiedad_id = $1 AND r.fin >= now()';
@@ -109,7 +121,7 @@ reservasRouter.get('/', async (req, res) => {
   res.json(rows);
 });
 
-// Cancela una reserva futura: la puede cancelar su autor o un administrador de la misma copropiedad.
+// Cancela una reserva futura: la puede cancelar su autor o el vigilante de la misma copropiedad.
 reservasRouter.post('/:id/cancelar', async (req, res) => {
   const user = req.user!;
   const id = Number(req.params.id);
@@ -117,29 +129,30 @@ reservasRouter.post('/:id/cancelar', async (req, res) => {
   const { rows } = await pool.query('SELECT usuario_id, estado, inicio FROM reserva WHERE id = $1 AND copropiedad_id = $2', [id, user.copropiedadId]);
   const r = rows[0];
   if (!r) throw new HttpError(404, 'Reserva no encontrada');
-  if (user.rol !== 'administrador' && r.usuario_id !== user.id) throw new HttpError(403, 'No puedes cancelar la reserva de otra persona');
+  if (user.rol !== 'vigilante' && r.usuario_id !== user.id) throw new HttpError(403, 'No puedes cancelar la reserva de otra persona');
   if (r.estado !== 'confirmada') throw new HttpError(409, 'La reserva ya estaba cancelada');
   if (new Date(r.inicio) <= new Date()) throw new HttpError(409, 'No se puede cancelar una reserva que ya comenzó');
   await pool.query(`UPDATE reserva SET estado = 'cancelada', cancelado_en = now() WHERE id = $1`, [id]);
   await auditar(pool, { copropiedadId: user.copropiedadId, usuarioId: user.id, accion: 'cancelar_reserva', entidad: 'reserva', entidadId: id });
+  await avisarReservaRetirada(id, r.usuario_id, r.inicio, user.id, 'cancelada');
   const out = await pool.query(`${SELECT_RESERVA} WHERE r.id = $1`, [id]);
   res.json(out.rows[0]);
 });
 
-// El administrador elimina todas las reservas canceladas de su copropiedad.
+// El vigilante elimina todas las reservas canceladas de su copropiedad.
 // (Se declara antes de '/:id' para que 'canceladas' no se interprete como un identificador.)
 reservasRouter.delete('/canceladas', async (req, res) => {
   const user = req.user!;
-  if (user.rol !== 'administrador') throw new HttpError(403, 'No tienes permiso para esta acción');
+  if (user.rol !== 'vigilante') throw new HttpError(403, 'La operación de las reservas es del vigilante');
   const { rowCount } = await pool.query(`DELETE FROM reserva WHERE copropiedad_id = $1 AND estado = 'cancelada'`, [user.copropiedadId]);
   await auditar(pool, { copropiedadId: user.copropiedadId, usuarioId: user.id, accion: 'eliminar_reservas_canceladas', entidad: 'reserva', detalle: { cantidad: rowCount } });
   res.json({ eliminadas: rowCount });
 });
 
-// El administrador elimina una reserva (vigente o cancelada). Queda constancia en la auditoría.
+// El vigilante elimina una reserva (vigente o cancelada). Queda constancia en la auditoría.
 reservasRouter.delete('/:id', async (req, res) => {
   const user = req.user!;
-  if (user.rol !== 'administrador') throw new HttpError(403, 'No tienes permiso para esta acción');
+  if (user.rol !== 'vigilante') throw new HttpError(403, 'La operación de las reservas es del vigilante');
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, 'Identificador inválido');
   const { rows } = await pool.query(
@@ -148,5 +161,7 @@ reservasRouter.delete('/:id', async (req, res) => {
   );
   if (!rows[0]) throw new HttpError(404, 'Reserva no encontrada');
   await auditar(pool, { copropiedadId: user.copropiedadId, usuarioId: user.id, accion: 'eliminar_reserva', entidad: 'reserva', entidadId: id, detalle: rows[0] });
+  // Solo se avisa si la reserva todavía estaba vigente: eliminar una ya cancelada o terminada no afecta al residente.
+  if (rows[0].estado === 'confirmada' && new Date(rows[0].inicio) > new Date()) await avisarReservaRetirada(id, rows[0].usuario_id, rows[0].inicio, user.id, 'eliminada');
   res.status(204).end();
 });
